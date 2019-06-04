@@ -66,24 +66,55 @@
 {
     BOOL authorizationStatusClassPropertyAvailable = [CLLocationManager respondsToSelector:@selector(authorizationStatus)]; // iOS 4.2+
     
+    /*
+    
+    */
+    BOOL authorized = false;
     if (authorizationStatusClassPropertyAvailable) {
         NSUInteger authStatus = [CLLocationManager authorizationStatus];
 #ifdef __IPHONE_8_0
         if ([self.locationManager respondsToSelector:@selector(requestWhenInUseAuthorization)]) {  //iOS 8.0+
-            return (authStatus == kCLAuthorizationStatusAuthorizedWhenInUse) || (authStatus == kCLAuthorizationStatusAuthorizedAlways) || (authStatus == kCLAuthorizationStatusNotDetermined);
+            authorized = (authStatus == kCLAuthorizationStatusAuthorizedWhenInUse) || (authStatus == kCLAuthorizationStatusAuthorizedAlways) || (authStatus == kCLAuthorizationStatusNotDetermined);
         }
 #endif
-        return (authStatus == kCLAuthorizationStatusAuthorizedAlways) || (authStatus == kCLAuthorizationStatusNotDetermined);
+        else{
+            authorized = (authStatus == kCLAuthorizationStatusAuthorizedAlways) || (authStatus == kCLAuthorizationStatusNotDetermined);
+        }
     }
-    
+    NSLog(@"------ AUTHORIZED = ");
+    NSLog(authorized ? @"Yes" : @"No");
+    if (authorized){
+        return authorized;
+    }
+    else{
+        NSLog(@"------ CHECK PERMISSION = ");
+        //IOS 12.x
+        if ([CLLocationManager locationServicesEnabled]) {
+            if ([CLLocationManager authorizationStatus] <= kCLAuthorizationStatusDenied) {
+                NSLog(@"------ PERMISSION DENIED");
+                //self.goSettings;
+                return NO;
+                //Need authorization
+                //Add message to user
+            }
+        } else {
+            //Dans ce cas vous devez avoir le callback requireLocationOn depuis NAOSDK
+            NSLog(@"------ LOCATION DISABLED");
+            return NO;
+        }
+    }
     // by default, assume YES (for iOS < 4.2)
     return YES;
 }
 
 - (BOOL)isLocationServicesEnabled
 {
+    
+    
     BOOL locationServicesEnabledInstancePropertyAvailable = [self.locationManager respondsToSelector:@selector(locationServicesEnabled)]; // iOS 3.x
     BOOL locationServicesEnabledClassPropertyAvailable = [CLLocationManager respondsToSelector:@selector(locationServicesEnabled)]; // iOS 4.x
+    
+    
     
     if (locationServicesEnabledClassPropertyAvailable) { // iOS 4.x
         return [CLLocationManager locationServicesEnabled];
@@ -94,11 +125,15 @@
 
 - (void)startLocation:(BOOL)enableHighAccuracy
 {
+    NSLog(@"------ START LOCATION");
     if (![self isLocationServicesEnabled]) {
+        NSLog(@"------ PERMISSION DENIED AT STRAT LOCATION");
+        //[self goSettings];
         [self returnLocationError:PERMISSIONDENIED withMessage:@"Location services are not enabled."];
         return;
     }
     if (![self isAuthorized]) {
+        NSLog(@"------ IS AUTHORISED = FALSE");
         NSString* message = nil;
         BOOL authStatusAvailable = [CLLocationManager respondsToSelector:@selector(authorizationStatus)]; // iOS 4.2+
         if (authStatusAvailable) {
@@ -110,6 +145,7 @@
                 message = @"Application's use of location services is restricted.";
             }
         }
+        //[self goSettings];
         // PERMISSIONDENIED is only PositionError that makes sense when authorization denied
         [self returnLocationError:PERMISSIONDENIED withMessage:message];
         
@@ -120,10 +156,10 @@
     NSUInteger code = [CLLocationManager authorizationStatus];
     if (code == kCLAuthorizationStatusNotDetermined && ([self.locationManager respondsToSelector:@selector(requestAlwaysAuthorization)] || [self.locationManager respondsToSelector:@selector(requestWhenInUseAuthorization)])) { //iOS8+
         __highAccuracyEnabled = enableHighAccuracy;
-        if([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationWhenInUseUsageDescription"]){
-            [self.locationManager requestWhenInUseAuthorization];
-        } else if([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationAlwaysUsageDescription"]) {
+        if([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationAlwaysUsageDescription"]){
             [self.locationManager  requestAlwaysAuthorization];
+        } else if([[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSLocationWhenInUseUsageDescription"]) {
+            [self.locationManager requestWhenInUseAuthorization];
         } else {
             NSLog(@"[Warning] No NSLocationAlwaysUsageDescription or NSLocationWhenInUseUsageDescription key is defined in the Info.plist file.");
         }
@@ -171,14 +207,12 @@
     CDVLocationData* cData = self.locationData;
     
     cData.locationInfo = newLocation;
-    @synchronized (self.locationData.locationCallbacks) {
-        if (self.locationData.locationCallbacks.count > 0) {
-            for (NSString* callbackId in self.locationData.locationCallbacks) {
-                [self returnLocationInfo:callbackId andKeepCallback:NO];
-            }
-            
-            [self.locationData.locationCallbacks removeAllObjects];
+    if (self.locationData.locationCallbacks.count > 0) {
+        for (NSString* callbackId in self.locationData.locationCallbacks) {
+            [self returnLocationInfo:callbackId andKeepCallback:NO];
         }
+        
+        [self.locationData.locationCallbacks removeAllObjects];
     }
     if (self.locationData.watchCallbacks.count > 0) {
         for (NSString* timerId in self.locationData.watchCallbacks) {
@@ -199,6 +233,7 @@
         if ([self isLocationServicesEnabled] == NO) {
             NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
             [posError setObject:[NSNumber numberWithInt:PERMISSIONDENIED] forKey:@"code"];
+            NSLog(@"-------------LOCATION DISABLED");
             [posError setObject:@"Location services are disabled." forKey:@"message"];
             CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:posError];
             [self.commandDelegate sendPluginResult:result callbackId:callbackId];
@@ -207,18 +242,14 @@
                 self.locationData = [[CDVLocationData alloc] init];
             }
             CDVLocationData* lData = self.locationData;
-            @synchronized (self.locationData.locationCallbacks) {
-                if (!lData.locationCallbacks) {
-                    lData.locationCallbacks = [NSMutableArray arrayWithCapacity:1];
-                }
+            if (!lData.locationCallbacks) {
+                lData.locationCallbacks = [NSMutableArray arrayWithCapacity:1];
             }
             
             if (!__locationStarted || (__highAccuracyEnabled != enableHighAccuracy)) {
                 // add the callbackId into the array so we can call back when get data
-                @synchronized (self.locationData.locationCallbacks) {
-                    if (callbackId != nil) {
-                        [lData.locationCallbacks addObject:callbackId];
-                    }
+                if (callbackId != nil) {
+                    [lData.locationCallbacks addObject:callbackId];
                 }
                 // Tell the location manager to start notifying us of heading updates
                 [self startLocation:enableHighAccuracy];
@@ -246,14 +277,17 @@
     
     // add the callbackId into the dictionary so we can call back whenever get data
     [lData.watchCallbacks setObject:callbackId forKey:timerId];
-    
+    NSLog(@"addWatch");
     if ([self isLocationServicesEnabled] == NO) {
+        NSLog(@"-------------LOCATION DISABLED");
         NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
         [posError setObject:[NSNumber numberWithInt:PERMISSIONDENIED] forKey:@"code"];
         [posError setObject:@"Location services are disabled." forKey:@"message"];
         CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:posError];
         [self.commandDelegate sendPluginResult:result callbackId:callbackId];
+        
     } else {
+        NSLog(@"-------------LOCATION ENABLED");
         if (!__locationStarted || (__highAccuracyEnabled != enableHighAccuracy)) {
             // Tell the location manager to start notifying us of location updates
             [self startLocation:enableHighAccuracy];
@@ -309,22 +343,22 @@
 
 - (void)returnLocationError:(NSUInteger)errorCode withMessage:(NSString*)message
 {
+    NSLog(@"-------------LOCATION ERROR ------");
     NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
     
     [posError setObject:[NSNumber numberWithUnsignedInteger:errorCode] forKey:@"code"];
     [posError setObject:message ? message:@"" forKey:@"message"];
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:posError];
     
-    
-    @synchronized (self.locationData.locationCallbacks) {
-        for (NSString* callbackId in self.locationData.locationCallbacks) {
-            [self.commandDelegate sendPluginResult:result callbackId:callbackId];
-        }
-        
-        [self.locationData.locationCallbacks removeAllObjects];
+    for (NSString* callbackId in self.locationData.locationCallbacks) {
+        NSLog(@"-------------LOCATION ERROR 11111------");
+        [self.commandDelegate sendPluginResult:result callbackId:callbackId];
     }
     
+    [self.locationData.locationCallbacks removeAllObjects];
+    
     for (NSString* callbackId in self.locationData.watchCallbacks) {
+        NSLog(@"-------------LOCATION ERROR 222222------");
         [self.commandDelegate sendPluginResult:result callbackId:callbackId];
     }
 }
@@ -355,7 +389,9 @@
 //iOS8+
 -(void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
 {
+    NSLog(@"------ Authorisation status changed");
     if(!__locationStarted){
+        NSLog(@"------ Authorisation status changed");
         [self startLocation:__highAccuracyEnabled];
     }
 }
@@ -369,6 +405,28 @@
 {
     [self _stopLocation];
     [self.locationManager stopUpdatingHeading];
+}
+- (void) goSettings:(CDVInvokedUrlCommand*)command
+{
+    UIAlertController * alert = [UIAlertController
+                                 alertControllerWithTitle:@"Title"
+                                 message:@"Message"
+                                 preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction* yesButton = [UIAlertAction
+                                actionWithTitle:@"Yes, please"
+                                style:UIAlertActionStyleDefault
+                                handler:^(UIAlertAction * action) {
+                                    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+                                }];
+    UIAlertAction* noButton = [UIAlertAction
+                               actionWithTitle:@"No, thanks"
+                               style:UIAlertActionStyleDefault
+                               handler:^(UIAlertAction * action) {
+                                   //Handle no, thanks button
+                               }];
+    [alert addAction:yesButton];
+    [alert addAction:noButton];
+    [self.viewController presentViewController:alert animated:YES completion:nil];
 }
 
 @end

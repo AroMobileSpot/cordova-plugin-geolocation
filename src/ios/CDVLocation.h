@@ -67,4 +67,8 @@ typedef NSUInteger CDVLocationStatus;
        didFailWithError:(NSError*)error;
 
 - (BOOL)isLocationServicesEnabled;
+
+- (void) goSettings:(CDVInvokedUrlCommand*)command;
+
+
 @end

@@ -18,7 +18,7 @@
  * under the License.
  *
 */
-
+console.log("GEOLOCATION.JS CALLED");
 var argscheck = require('cordova/argscheck');
 var utils = require('cordova/utils');
 var exec = require('cordova/exec');
