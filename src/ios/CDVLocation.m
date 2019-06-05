@@ -51,7 +51,7 @@
 
 @implementation CDVLocation
 
-@synthesize locationManager, locationData;
+@synthesize locationManager, locationData, centralManager;
 
 - (void)pluginInitialize
 {
@@ -81,17 +81,13 @@
             authorized = (authStatus == kCLAuthorizationStatusAuthorizedAlways) || (authStatus == kCLAuthorizationStatusNotDetermined);
         }
     }
-    NSLog(@"------ AUTHORIZED = ");
-    NSLog(authorized ? @"Yes" : @"No");
     if (authorized){
         return authorized;
     }
     else{
-        NSLog(@"------ CHECK PERMISSION = ");
         //IOS 12.x
         if ([CLLocationManager locationServicesEnabled]) {
             if ([CLLocationManager authorizationStatus] <= kCLAuthorizationStatusDenied) {
-                NSLog(@"------ PERMISSION DENIED");
                 //self.goSettings;
                 return NO;
                 //Need authorization
@@ -99,7 +95,6 @@
             }
         } else {
             //Dans ce cas vous devez avoir le callback requireLocationOn depuis NAOSDK
-            NSLog(@"------ LOCATION DISABLED");
             return NO;
         }
     }
@@ -125,15 +120,13 @@
 
 - (void)startLocation:(BOOL)enableHighAccuracy
 {
-    NSLog(@"------ START LOCATION");
     if (![self isLocationServicesEnabled]) {
-        NSLog(@"------ PERMISSION DENIED AT STRAT LOCATION");
         //[self goSettings];
         [self returnLocationError:PERMISSIONDENIED withMessage:@"Location services are not enabled."];
         return;
     }
     if (![self isAuthorized]) {
-        NSLog(@"------ IS AUTHORISED = FALSE");
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionDenied')"];
         NSString* message = nil;
         BOOL authStatusAvailable = [CLLocationManager respondsToSelector:@selector(authorizationStatus)]; // iOS 4.2+
         if (authStatusAvailable) {
@@ -150,6 +143,9 @@
         [self returnLocationError:PERMISSIONDENIED withMessage:message];
         
         return;
+    }
+    else{
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionGranted')"];
     }
     
 #ifdef __IPHONE_8_0
@@ -233,7 +229,6 @@
         if ([self isLocationServicesEnabled] == NO) {
             NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
             [posError setObject:[NSNumber numberWithInt:PERMISSIONDENIED] forKey:@"code"];
-            NSLog(@"-------------LOCATION DISABLED");
             [posError setObject:@"Location services are disabled." forKey:@"message"];
             CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:posError];
             [self.commandDelegate sendPluginResult:result callbackId:callbackId];
@@ -259,9 +254,21 @@
         }
     }];
 }
-
+- (void)centralManagerDidUpdateState:(CBCentralManager *)central {
+    if (central.state == CBCentralManagerStatePoweredOn) {
+       NSLog(@"-------------------NATIVE BLUETOOTH AVAILABLE");
+       [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.bluetoothEnabled')"];
+       [self startLocation:__highAccuracyEnabled];
+    } else if(central.state == CBCentralManagerStatePoweredOff) {
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.bluetoothDisabled')"];
+        NSLog(@"-------------------NATIVE BLUETOOTH UNAVAILABLE");
+    }
+}
 - (void)addWatch:(CDVInvokedUrlCommand*)command
 {
+    
+    centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
+    
     NSString* callbackId = command.callbackId;
     NSString* timerId = [command argumentAtIndex:0];
     BOOL enableHighAccuracy = [[command argumentAtIndex:1] boolValue];
@@ -277,9 +284,8 @@
     
     // add the callbackId into the dictionary so we can call back whenever get data
     [lData.watchCallbacks setObject:callbackId forKey:timerId];
-    NSLog(@"addWatch");
     if ([self isLocationServicesEnabled] == NO) {
-        NSLog(@"-------------LOCATION DISABLED");
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationDisabled')"];
         NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
         [posError setObject:[NSNumber numberWithInt:PERMISSIONDENIED] forKey:@"code"];
         [posError setObject:@"Location services are disabled." forKey:@"message"];
@@ -287,7 +293,7 @@
         [self.commandDelegate sendPluginResult:result callbackId:callbackId];
         
     } else {
-        NSLog(@"-------------LOCATION ENABLED");
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationEnabled')"];
         if (!__locationStarted || (__highAccuracyEnabled != enableHighAccuracy)) {
             // Tell the location manager to start notifying us of location updates
             [self startLocation:enableHighAccuracy];
@@ -343,7 +349,6 @@
 
 - (void)returnLocationError:(NSUInteger)errorCode withMessage:(NSString*)message
 {
-    NSLog(@"-------------LOCATION ERROR ------");
     NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
     
     [posError setObject:[NSNumber numberWithUnsignedInteger:errorCode] forKey:@"code"];
@@ -351,14 +356,12 @@
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:posError];
     
     for (NSString* callbackId in self.locationData.locationCallbacks) {
-        NSLog(@"-------------LOCATION ERROR 11111------");
         [self.commandDelegate sendPluginResult:result callbackId:callbackId];
     }
     
     [self.locationData.locationCallbacks removeAllObjects];
     
     for (NSString* callbackId in self.locationData.watchCallbacks) {
-        NSLog(@"-------------LOCATION ERROR 222222------");
         [self.commandDelegate sendPluginResult:result callbackId:callbackId];
     }
 }
@@ -373,6 +376,10 @@
         // PositionError.PERMISSION_DENIED = 1;
         // PositionError.POSITION_UNAVAILABLE = 2;
         // PositionError.TIMEOUT = 3;
+        
+        
+        
+        
         NSUInteger positionError = POSITIONUNAVAILABLE;
         if (error.code == kCLErrorDenied) {
             positionError = PERMISSIONDENIED;
@@ -389,9 +396,21 @@
 //iOS8+
 -(void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
 {
-    NSLog(@"------ Authorisation status changed");
+    [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.authorisationStatusChanged')"];
+    if ([self isLocationServicesEnabled] == NO) {
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationDisabled')"];
+    }
+    else if (![self isAuthorized]) {
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationEnabled')"];
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionDenied')"];
+    }
+    else{
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationEnabled')"];
+        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionGranted')"];
+    }
+    
+    
     if(!__locationStarted){
-        NSLog(@"------ Authorisation status changed");
         [self startLocation:__highAccuracyEnabled];
     }
 }
@@ -408,6 +427,7 @@
 }
 - (void) goSettings:(CDVInvokedUrlCommand*)command
 {
+    NSString* type = [command.arguments objectAtIndex:0];
     UIAlertController * alert = [UIAlertController
                                  alertControllerWithTitle:@"Title"
                                  message:@"Message"
@@ -416,7 +436,14 @@
                                 actionWithTitle:@"Yes, please"
                                 style:UIAlertActionStyleDefault
                                 handler:^(UIAlertAction * action) {
-                                    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+                                    
+                                    if([type isEqualToString:@"app"]){
+                                        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+                                    }
+                                    else if([type isEqualToString:@"main"]){
+                                        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+                                        //[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"App-Prefs:root=Privacy&path=LOCATION"]];
+                                    }
                                 }];
     UIAlertAction* noButton = [UIAlertAction
                                actionWithTitle:@"No, thanks"

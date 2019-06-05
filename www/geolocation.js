@@ -18,7 +18,6 @@
  * under the License.
  *
 */
-console.log("GEOLOCATION.JS CALLED");
 var argscheck = require('cordova/argscheck');
 var utils = require('cordova/utils');
 var exec = require('cordova/exec');
@@ -142,6 +141,10 @@ var geolocation = {
             exec(win, fail, 'Geolocation', 'getLocation', [options.enableHighAccuracy, options.maximumAge]);
         }
         return timeoutTimer;
+    },
+    goSettings: function(type) {
+        console.log("-----------------------GO SETTINGS");
+        exec(null, null, 'Geolocation', 'goSettings', [type]);
     },
     /**
      * Asynchronously watches the geolocation for changes to geolocation.  When a change occurs,
