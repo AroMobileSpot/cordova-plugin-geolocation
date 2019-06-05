@@ -20,6 +20,7 @@
 #import <UIKit/UIKit.h>
 #import <CoreLocation/CoreLocation.h>
 #import <Cordova/CDVPlugin.h>
+#import <CoreBluetooth/CoreBluetooth.h>
 
 enum CDVLocationStatus {
     PERMISSIONDENIED = 1,
@@ -43,13 +44,14 @@ typedef NSUInteger CDVLocationStatus;
 
 @end
 
-@interface CDVLocation : CDVPlugin <CLLocationManagerDelegate>{
+@interface CDVLocation : CDVPlugin <CLLocationManagerDelegate, CBCentralManagerDelegate>{
     @private BOOL __locationStarted;
     @private BOOL __highAccuracyEnabled;
     CDVLocationData* locationData;
 }
 
 @property (nonatomic, strong) CLLocationManager* locationManager;
+@property (nonatomic, strong) CBCentralManager* centralManager;
 @property (nonatomic, strong) CDVLocationData* locationData;
 
 - (void)getLocation:(CDVInvokedUrlCommand*)command;
