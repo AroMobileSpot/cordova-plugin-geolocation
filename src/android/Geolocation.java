@@ -18,9 +18,21 @@
 
 package org.apache.cordova.geolocation;
 
+import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.Manifest;
+import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
+
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaArgs;
@@ -31,21 +43,117 @@ import org.apache.cordova.LOG;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+
+
 import javax.security.auth.callback.Callback;
 
-public class Geolocation extends CordovaPlugin {
+import android.annotation.TargetApi;
+import android.provider.Settings;
+
+import com.rctestapp.BuildConfig;
+
+
+public class Geolocation extends CordovaPlugin  {
 
     String TAG = "GeolocationPlugin";
     CallbackContext context;
 
     String [] permissions = { Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
 
+    Boolean doNotShowAnymoreTicked = false;
 
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         LOG.d(TAG, "We are entering execute");
+
+
+
+
+
         context = callbackContext;
+
+        //Context mcontext=this.cordova.getActivity().getApplicationContext();
+        Intent intent = null;
+        Uri packageUri = Uri.parse("package:" + this.cordova.getActivity().getPackageName());
         if(action.equals("getPermission"))
         {
+
+
+
+            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            boolean isEnabled = bluetoothAdapter.isEnabled();
+            bluetoothAdapter.enable();
+            sendJavascript("PubSub.publish('geoloc.bluetoothEnabled')");
+            /*
+
+            BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (mBluetoothAdapter == null) {
+                LOG.d(TAG, "--------------------NO BLUETOOTH");
+                sendJavascript("PubSub.publish('geoloc.bluetoothDisabled')");
+            } else {
+
+
+                if (!mBluetoothAdapter.isEnabled()) {
+                    LOG.d(TAG, "--------------------BLUETOOTH IS DISABLED");
+                    sendJavascript("PubSub.publish('geoloc.bluetoothDisabled')");
+                }
+                else{
+                    LOG.d(TAG, "--------------------BLUETOOTH IS ENABLED");
+                    sendJavascript("PubSub.publish('geoloc.bluetoothEnabled')");
+                }
+            }
+            */
+
+
+
+
+            boolean gps_enabled;
+            boolean network_enabled;
+            LocationManager lm = (LocationManager) this.cordova.getActivity().getSystemService(
+                    Context.LOCATION_SERVICE);
+            try {
+                gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                gps_enabled = false;
+            }
+
+            try {
+                network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            } catch(Exception ex) {
+                ex.printStackTrace();
+                network_enabled = false;
+            }
+
+            if(!gps_enabled && !network_enabled) {
+                sendJavascript("PubSub.publish('geoloc.locationDisabled')");
+            }
+            else{
+                sendJavascript("PubSub.publish('geoloc.locationEnabled')");
+            }
+
+            if(hasPermisssion())
+            {
+                sendJavascript("PubSub.publish('geoloc.permissionGranted')");
+
+                PluginResult r = new PluginResult(PluginResult.Status.OK);
+                context.sendPluginResult(r);
+                return true;
+            }
+            else {
+                PermissionHelper.requestPermissions(this, 0, permissions);
+                if(doNotShowAnymoreTicked) {
+                    LOG.d(TAG, "--------------------NEVER SHOW AGAIN TICKED");
+
+                }
+                else{
+                    LOG.d(TAG, "--------------------NEVER SHOW AGAIN UNTICKED");
+
+                }
+            }
+            return true;
+        }
+        else if(action.equals("clearWatch")){
+            LOG.d(TAG, "------------------ CLEAR WATCH");
             if(hasPermisssion())
             {
                 PluginResult r = new PluginResult(PluginResult.Status.OK);
@@ -53,9 +161,30 @@ public class Geolocation extends CordovaPlugin {
                 return true;
             }
             else {
-                PermissionHelper.requestPermissions(this, 0, permissions);
+                return false;
             }
-            return true;
+        }
+        else if(action.equals("goSettings")){
+            Context mContext = this.cordova.getActivity();
+            new AlertDialog.Builder(mContext)
+                    .setTitle("Activation de la localisation")
+                    .setMessage("Vous devez activer le service de localisation, voulez-vous accéder au paramètres de votre application")
+                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent intent = null;
+                            intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri);
+                            mContext.startActivity(intent);
+                        }
+                    })
+                    // A null listener allows the button to dismiss the dialog and take no further action.
+                    .setNegativeButton(android.R.string.no, null)
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
+
+            /*
+
+
+            */
         }
         return false;
     }
@@ -67,15 +196,34 @@ public class Geolocation extends CordovaPlugin {
         PluginResult result;
         //This is important if we're using Cordova without using Cordova, but we have the geolocation plugin installed
         if(context != null) {
-            for (int r : grantResults) {
-                if (r == PackageManager.PERMISSION_DENIED) {
-                    LOG.d(TAG, "Permission Denied!");
-                    result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
-                    context.sendPluginResult(result);
-                    return;
+            for (int i = 0, len = permissions.length; i < len; i++) {
+                String permission = permissions[i];
+                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                    LOG.d(TAG, "Permission Denied");
+                    // user rejected the permission
+                    boolean showRationale = this.cordova.getActivity().shouldShowRequestPermissionRationale( permission );
+                    LOG.d(TAG, "-----showRationale = ",showRationale);
+                    if (! showRationale) {
+                        LOG.d(TAG, "----NEVER SHOW AGAIN TICKED");
+                        doNotShowAnymoreTicked = true;
+                        result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
+                        context.sendPluginResult(result);
+                        sendJavascript("PubSub.publish('geoloc.permissionDenied')");
+                        return;
+                    }
+                    else {
+                        LOG.d(TAG, "----NEVER SHOW AGAIN UNTICKED");
+                        doNotShowAnymoreTicked = false;
+                        result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
+                        context.sendPluginResult(result);
+                        sendJavascript("PubSub.publish('geoloc.permissionDeniedWithPrompt')");
+                        return;
+                    }
                 }
-
             }
+
+
+            sendJavascript("PubSub.publish('geoloc.locationEnabled')");
             result = new PluginResult(PluginResult.Status.OK);
             context.sendPluginResult(result);
         }
@@ -102,6 +250,21 @@ public class Geolocation extends CordovaPlugin {
         PermissionHelper.requestPermissions(this, requestCode, permissions);
     }
 
+    @TargetApi(Build.VERSION_CODES.KITKAT)
+    public void sendJavascript(final String javascript) {
+        if (javascript != null && javascript.trim().length() > 0 && !javascript.equals("null")) {
 
+            webView.getView().post(new Runnable() {
+                @Override
+                public void run() {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                        webView.sendJavascript(javascript);
+                    } else {
+                        webView.loadUrl("javascript:" + javascript);
+                    }
+                }
+            });
+        }
+    }
 
 }

@@ -1,3 +1,4 @@
+cordova.define("cordova-plugin-geolocation.geolocation", function(require, exports, module) {
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -66,6 +67,11 @@ module.exports = {
             geo.clearWatch(nativeWatchId);
         };
 
-        exec(win, null, 'Geolocation', 'getPermission', []);
+        exec(win, null, 'Geolocation', 'clearWatch', []);
+    },
+    goSettings: function (pluginWatchId) {
+        exec(null, null, 'Geolocation', 'goSettings', []);
     }
 };
+
+});
