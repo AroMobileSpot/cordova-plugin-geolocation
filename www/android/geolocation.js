@@ -54,7 +54,7 @@ module.exports = {
                 error(new PositionError(PositionError.PERMISSION_DENIED, 'Illegal Access'));
             }
         };
-        exec(win, fail, 'Geolocation', 'clearWatch', []);
+        exec(win, fail, 'Geolocation', 'getPermission', []);
 
         return pluginWatchId;
     },
