@@ -20,9 +20,11 @@ package org.apache.cordova.geolocation;
 
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.Manifest;
 import android.location.LocationManager;
@@ -62,6 +64,38 @@ public class Geolocation extends CordovaPlugin  {
 
     Boolean doNotShowAnymoreTicked = false;
 
+
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+
+            if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
+                        BluetoothAdapter.ERROR);
+                switch (state) {
+                    case BluetoothAdapter.STATE_OFF:
+                        LOG.d(TAG, "--------------------BLUETOOTH IS DISABLED");
+                        sendJavascript("PubSub.publish('geoloc.bluetoothDisabled')");
+                        break;
+                    case BluetoothAdapter.STATE_TURNING_OFF:
+                        LOG.d(TAG, "--------------------BLUETOOTH TURNING OFF");
+                        break;
+                    case BluetoothAdapter.STATE_ON:
+                        LOG.d(TAG, "--------------------BLUETOOTH IS ENABLED");
+                        sendJavascript("PubSub.publish('geoloc.bluetoothEnabled')");
+                        break;
+                    case BluetoothAdapter.STATE_TURNING_ON:
+                        LOG.d(TAG, "--------------------BLUETOOTH TURNING ON");
+                        break;
+                }
+            }
+        }
+    };
+
+
+
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         LOG.d(TAG, "We are entering execute");
 
@@ -83,6 +117,13 @@ public class Geolocation extends CordovaPlugin  {
             boolean isEnabled = bluetoothAdapter.isEnabled();
             bluetoothAdapter.enable();
             sendJavascript("PubSub.publish('geoloc.bluetoothEnabled')");
+
+
+            // Register for broadcasts on BluetoothAdapter state change
+            IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+            this.cordova.getActivity().registerReceiver(mReceiver, filter);
+
+
             /*
 
             BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
