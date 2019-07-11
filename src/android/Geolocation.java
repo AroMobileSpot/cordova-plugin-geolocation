@@ -94,7 +94,38 @@ public class Geolocation extends CordovaPlugin  {
         }
     };
 
+    private BroadcastReceiver gpsReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().matches(LocationManager.PROVIDERS_CHANGED_ACTION)) {
+                LOG.d(TAG, "--------------------LOCATION STATUS CHANGED");
+                boolean gps_enabled;
+                boolean network_enabled;
+                LocationManager lm = (LocationManager) context.getSystemService(
+                        Context.LOCATION_SERVICE);
+                try {
+                    gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    gps_enabled = false;
+                }
 
+                try {
+                    network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+                } catch(Exception ex) {
+                    ex.printStackTrace();
+                    network_enabled = false;
+                }
+
+                if(!gps_enabled && !network_enabled) {
+                    sendJavascript("PubSub.publish('geoloc.locationDisabled')");
+                }
+                else{
+                    sendJavascript("PubSub.publish('geoloc.locationEnabled')");
+                }
+            }
+        }
+    };
 
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         LOG.d(TAG, "We are entering execute");
@@ -123,6 +154,8 @@ public class Geolocation extends CordovaPlugin  {
             IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
             this.cordova.getActivity().registerReceiver(mReceiver, filter);
 
+            IntentFilter filter2 = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
+            this.cordova.getActivity().registerReceiver(gpsReceiver, filter2);
 
             /*
 
