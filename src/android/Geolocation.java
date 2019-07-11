@@ -220,6 +220,10 @@ public class Geolocation extends CordovaPlugin  {
                         return;
                     }
                 }
+                else if (grantResults[i] == PackageManager.PERMISSION_GRANTED){
+                    LOG.d(TAG, "Permission Granted");
+                    sendJavascript("PubSub.publish('geoloc.permissionGranted')");
+                }
             }
 
 
