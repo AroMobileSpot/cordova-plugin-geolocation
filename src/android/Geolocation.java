@@ -52,7 +52,6 @@ import javax.security.auth.callback.Callback;
 import android.annotation.TargetApi;
 import android.provider.Settings;
 
-import com.rctestapp.BuildConfig;
 
 
 public class Geolocation extends CordovaPlugin  {
