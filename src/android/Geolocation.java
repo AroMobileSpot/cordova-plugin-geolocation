@@ -76,14 +76,14 @@ public class Geolocation extends CordovaPlugin  {
                 switch (state) {
                     case BluetoothAdapter.STATE_OFF:
                         LOG.d(TAG, "--------------------BLUETOOTH IS DISABLED");
-                        sendJavascript("PubSub.publish('geoloc.bluetoothDisabled')");
+                        sendJavascript("events.publish('geoloc.bluetoothDisabled')");
                         break;
                     case BluetoothAdapter.STATE_TURNING_OFF:
                         LOG.d(TAG, "--------------------BLUETOOTH TURNING OFF");
                         break;
                     case BluetoothAdapter.STATE_ON:
                         LOG.d(TAG, "--------------------BLUETOOTH IS ENABLED");
-                        sendJavascript("PubSub.publish('geoloc.bluetoothEnabled')");
+                        sendJavascript("events.publish('geoloc.bluetoothEnabled')");
                         break;
                     case BluetoothAdapter.STATE_TURNING_ON:
                         LOG.d(TAG, "--------------------BLUETOOTH TURNING ON");
@@ -117,10 +117,10 @@ public class Geolocation extends CordovaPlugin  {
                 }
 
                 if(!gps_enabled && !network_enabled) {
-                    sendJavascript("PubSub.publish('geoloc.locationDisabled')");
+                    sendJavascript("events.publish('geoloc.locationDisabled')");
                 }
                 else{
-                    sendJavascript("PubSub.publish('geoloc.locationEnabled')");
+                    sendJavascript("events.publish('geoloc.locationEnabled')");
                 }
             }
         }
@@ -146,7 +146,7 @@ public class Geolocation extends CordovaPlugin  {
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             boolean isEnabled = bluetoothAdapter.isEnabled();
             bluetoothAdapter.enable();
-            sendJavascript("PubSub.publish('geoloc.bluetoothEnabled')");
+            sendJavascript("events.publish('geoloc.bluetoothEnabled')");
 
 
             // Register for broadcasts on BluetoothAdapter state change
@@ -161,17 +161,17 @@ public class Geolocation extends CordovaPlugin  {
             BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             if (mBluetoothAdapter == null) {
                 LOG.d(TAG, "--------------------NO BLUETOOTH");
-                sendJavascript("PubSub.publish('geoloc.bluetoothDisabled')");
+                sendJavascript("events.publish('geoloc.bluetoothDisabled')");
             } else {
 
 
                 if (!mBluetoothAdapter.isEnabled()) {
                     LOG.d(TAG, "--------------------BLUETOOTH IS DISABLED");
-                    sendJavascript("PubSub.publish('geoloc.bluetoothDisabled')");
+                    sendJavascript("events.publish('geoloc.bluetoothDisabled')");
                 }
                 else{
                     LOG.d(TAG, "--------------------BLUETOOTH IS ENABLED");
-                    sendJavascript("PubSub.publish('geoloc.bluetoothEnabled')");
+                    sendJavascript("events.publish('geoloc.bluetoothEnabled')");
                 }
             }
             */
@@ -198,15 +198,15 @@ public class Geolocation extends CordovaPlugin  {
             }
 
             if(!gps_enabled && !network_enabled) {
-                sendJavascript("PubSub.publish('geoloc.locationDisabled')");
+                sendJavascript("events.publish('geoloc.locationDisabled')");
             }
             else{
-                sendJavascript("PubSub.publish('geoloc.locationEnabled')");
+                sendJavascript("events.publish('geoloc.locationEnabled')");
             }
 
             if(hasPermisssion())
             {
-                sendJavascript("PubSub.publish('geoloc.permissionGranted')");
+                sendJavascript("events.publish('geoloc.permissionGranted')");
 
                 PluginResult r = new PluginResult(PluginResult.Status.OK);
                 context.sendPluginResult(r);
@@ -281,7 +281,7 @@ public class Geolocation extends CordovaPlugin  {
                         doNotShowAnymoreTicked = true;
                         result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
                         context.sendPluginResult(result);
-                        sendJavascript("PubSub.publish('geoloc.permissionDenied')");
+                        sendJavascript("events.publish('geoloc.permissionDenied')");
                         return;
                     }
                     else {
@@ -289,18 +289,18 @@ public class Geolocation extends CordovaPlugin  {
                         doNotShowAnymoreTicked = false;
                         result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
                         context.sendPluginResult(result);
-                        sendJavascript("PubSub.publish('geoloc.permissionDeniedWithPrompt')");
+                        sendJavascript("events.publish('geoloc.permissionDeniedWithPrompt')");
                         return;
                     }
                 }
                 else if (grantResults[i] == PackageManager.PERMISSION_GRANTED){
                     LOG.d(TAG, "Permission Granted");
-                    sendJavascript("PubSub.publish('geoloc.permissionGranted')");
+                    sendJavascript("events.publish('geoloc.permissionGranted')");
                 }
             }
 
 
-            sendJavascript("PubSub.publish('geoloc.locationEnabled')");
+            sendJavascript("events.publish('geoloc.locationEnabled')");
             result = new PluginResult(PluginResult.Status.OK);
             context.sendPluginResult(result);
         }
