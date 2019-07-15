@@ -126,7 +126,7 @@
         return;
     }
     if (![self isAuthorized]) {
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionDenied')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.permissionDenied')"];
         NSString* message = nil;
         BOOL authStatusAvailable = [CLLocationManager respondsToSelector:@selector(authorizationStatus)]; // iOS 4.2+
         if (authStatusAvailable) {
@@ -145,7 +145,7 @@
         return;
     }
     else{
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionGranted')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.permissionGranted')"];
     }
     
 #ifdef __IPHONE_8_0
@@ -257,10 +257,10 @@
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central {
     if (central.state == CBCentralManagerStatePoweredOn) {
        NSLog(@"-------------------NATIVE BLUETOOTH AVAILABLE");
-       [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.bluetoothEnabled')"];
+       [[self commandDelegate] evalJs:@"events.publish('geoloc.bluetoothEnabled')"];
        [self startLocation:__highAccuracyEnabled];
     } else if(central.state == CBCentralManagerStatePoweredOff) {
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.bluetoothDisabled')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.bluetoothDisabled')"];
         NSLog(@"-------------------NATIVE BLUETOOTH UNAVAILABLE");
     }
 }
@@ -285,7 +285,7 @@
     // add the callbackId into the dictionary so we can call back whenever get data
     [lData.watchCallbacks setObject:callbackId forKey:timerId];
     if ([self isLocationServicesEnabled] == NO) {
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationDisabled')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.locationDisabled')"];
         NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
         [posError setObject:[NSNumber numberWithInt:PERMISSIONDENIED] forKey:@"code"];
         [posError setObject:@"Location services are disabled." forKey:@"message"];
@@ -293,7 +293,7 @@
         [self.commandDelegate sendPluginResult:result callbackId:callbackId];
         
     } else {
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationEnabled')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.locationEnabled')"];
         if (!__locationStarted || (__highAccuracyEnabled != enableHighAccuracy)) {
             // Tell the location manager to start notifying us of location updates
             [self startLocation:enableHighAccuracy];
@@ -396,17 +396,17 @@
 //iOS8+
 -(void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
 {
-    [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.authorisationStatusChanged')"];
+    [[self commandDelegate] evalJs:@"events.publish('geoloc.authorisationStatusChanged')"];
     if ([self isLocationServicesEnabled] == NO) {
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationDisabled')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.locationDisabled')"];
     }
     else if (![self isAuthorized]) {
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationEnabled')"];
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionDenied')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.locationEnabled')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.permissionDenied')"];
     }
     else{
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.locationEnabled')"];
-        [[self commandDelegate] evalJs:@"PubSub.publish('geoloc.permissionGranted')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.locationEnabled')"];
+        [[self commandDelegate] evalJs:@"events.publish('geoloc.permissionGranted')"];
     }
     
     
