@@ -300,7 +300,35 @@ public class Geolocation extends CordovaPlugin  {
             }
 
 
-            sendJavascript("events.publish('geoloc.locationEnabled')");
+            
+
+            boolean gps_enabled;
+            boolean network_enabled;
+            LocationManager lm = (LocationManager) this.cordova.getActivity().getSystemService(
+                    Context.LOCATION_SERVICE);
+            try {
+                gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                gps_enabled = false;
+            }
+
+            try {
+                network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            } catch(Exception ex) {
+                ex.printStackTrace();
+                network_enabled = false;
+            }
+
+            if(!gps_enabled && !network_enabled) {
+                sendJavascript("events.publish('geoloc.locationDisabled')");
+            }
+            else{
+                sendJavascript("events.publish('geoloc.locationEnabled')");
+            }
+
+
+
             result = new PluginResult(PluginResult.Status.OK);
             context.sendPluginResult(result);
         }
