@@ -238,11 +238,17 @@ public class Geolocation extends CordovaPlugin  {
             }
         }
         else if(action.equals("goSettings")){
+
+            String Title = args[1];
+            String Message = args[2];
+            String Yes = args[3];
+            String No= args[4];
+
             Context mContext = this.cordova.getActivity();
             new AlertDialog.Builder(mContext)
-                    .setTitle("Activation de la localisation")
-                    .setMessage("Vous devez activer le service de localisation, voulez-vous accéder au paramètres de votre application")
-                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    .setTitle(Title)
+                    .setMessage(Message)
+                    .setPositiveButton(Yes, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             Intent intent = null;
                             intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri);
@@ -250,7 +256,7 @@ public class Geolocation extends CordovaPlugin  {
                         }
                     })
                     // A null listener allows the button to dismiss the dialog and take no further action.
-                    .setNegativeButton(android.R.string.no, null)
+                    .setNegativeButton(No, null)
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .show();
 
