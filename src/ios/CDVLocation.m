@@ -430,22 +430,20 @@
 
    
 
-    NSString enableHighAccuracy = [[command argumentAtIndex:0] boolValue];
-
-
+    NSString* type = [command.arguments objectAtIndex:0];
     NSString* Title = [command argumentAtIndex:1];
     NSString* Message = [command argumentAtIndex:2];
     NSString* Yes = [command argumentAtIndex:3];
     NSString* No = [command argumentAtIndex:4];
 
 
-    NSString* type = [command.arguments objectAtIndex:0];
+    
     UIAlertController * alert = [UIAlertController
-                                 alertControllerWithTitle:@Title
-                                 message:@Message
+                                 alertControllerWithTitle:Title
+                                 message:Message
                                  preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction* yesButton = [UIAlertAction
-                                actionWithTitle:@Yes
+                                actionWithTitle:Yes
                                 style:UIAlertActionStyleDefault
                                 handler:^(UIAlertAction * action) {
                                     
@@ -458,7 +456,7 @@
                                     }
                                 }];
     UIAlertAction* noButton = [UIAlertAction
-                               actionWithTitle:@No
+                               actionWithTitle:No
                                style:UIAlertActionStyleDefault
                                handler:^(UIAlertAction * action) {
                                    //Handle no, thanks button
