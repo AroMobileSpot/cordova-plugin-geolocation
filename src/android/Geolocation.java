@@ -239,10 +239,13 @@ public class Geolocation extends CordovaPlugin  {
         }
         else if(action.equals("goSettings")){
 
-            String Title = args[1];
-            String Message = args[2];
-            String Yes = args[3];
-            String No= args[4];
+
+            LOG.d(TAG, "-----showRationale = ",args);
+
+            String Title = "args[1]";
+            String Message = "args[2]";
+            String Yes = "args[3]";
+            String No= "args[4]";
 
             Context mContext = this.cordova.getActivity();
             new AlertDialog.Builder(mContext)
