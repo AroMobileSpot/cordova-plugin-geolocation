@@ -142,9 +142,9 @@ var geolocation = {
         }
         return timeoutTimer;
     },
-    goSettings: function(type) {
+    goSettings: function(type,options) {
         console.log("-----------------------GO SETTINGS");
-        exec(null, null, 'Geolocation', 'goSettings', [type]);
+        exec(null, null, 'Geolocation', 'goSettings', [type,options.questionTitle,options.question,options.yes,options.no]);
     },
     /**
      * Asynchronously watches the geolocation for changes to geolocation.  When a change occurs,

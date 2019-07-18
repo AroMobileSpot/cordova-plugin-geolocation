@@ -426,14 +426,26 @@
     [self.locationManager stopUpdatingHeading];
 }
 - (void) goSettings:(CDVInvokedUrlCommand*)command
-{
+{   
+
+   
+
+    NSString enableHighAccuracy = [[command argumentAtIndex:0] boolValue];
+
+
+    NSString* Title = [command argumentAtIndex:1];
+    NSString* Message = [command argumentAtIndex:2];
+    NSString* Yes = [command argumentAtIndex:3];
+    NSString* No = [command argumentAtIndex:4];
+
+
     NSString* type = [command.arguments objectAtIndex:0];
     UIAlertController * alert = [UIAlertController
-                                 alertControllerWithTitle:@"Title"
-                                 message:@"Message"
+                                 alertControllerWithTitle:@Title
+                                 message:@Message
                                  preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction* yesButton = [UIAlertAction
-                                actionWithTitle:@"Yes, please"
+                                actionWithTitle:@Yes
                                 style:UIAlertActionStyleDefault
                                 handler:^(UIAlertAction * action) {
                                     
@@ -446,7 +458,7 @@
                                     }
                                 }];
     UIAlertAction* noButton = [UIAlertAction
-                               actionWithTitle:@"No, thanks"
+                               actionWithTitle:@No
                                style:UIAlertActionStyleDefault
                                handler:^(UIAlertAction * action) {
                                    //Handle no, thanks button
