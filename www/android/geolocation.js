@@ -68,7 +68,7 @@ module.exports = {
 
         exec(win, null, 'Geolocation', 'clearWatch', []);
     },
-    goSettings: function (pluginWatchId) {
-        exec(null, null, 'Geolocation', 'goSettings', []);
+    goSettings: function (type,options) {
+        exec(null, null, 'Geolocation', 'goSettings', [type,options.labels.questionTitle,options.labels.question,options.labels.yes,options.labels.no]);
     }
 };

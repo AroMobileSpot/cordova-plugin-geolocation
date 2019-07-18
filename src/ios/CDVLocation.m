@@ -431,10 +431,11 @@
    
 
     NSString* type = [command.arguments objectAtIndex:0];
-    NSString* Title = [command argumentAtIndex:1];
-    NSString* Message = [command argumentAtIndex:2];
-    NSString* Yes = [command argumentAtIndex:3];
-    NSString* No = [command argumentAtIndex:4];
+    NSString* Title = [command.arguments objectAtIndex:1];
+    NSString* Message = [command.arguments objectAtIndex:2];
+    NSString* Yes = [command.arguments objectAtIndex:3];
+    NSString* No = [command.arguments objectAtIndex:4];
+
 
 
     
