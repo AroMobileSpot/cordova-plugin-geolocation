@@ -203,26 +203,6 @@ public class Geolocation extends CordovaPlugin  {
             else{
                 sendJavascript("events.publish('geoloc.locationEnabled')");
             }
-
-            if(hasPermisssion())
-            {
-                sendJavascript("events.publish('geoloc.permissionGranted')");
-
-                PluginResult r = new PluginResult(PluginResult.Status.OK);
-                context.sendPluginResult(r);
-                return true;
-            }
-            else {
-                PermissionHelper.requestPermissions(this, 0, permissions);
-                if(doNotShowAnymoreTicked) {
-                    LOG.d(TAG, "--------------------NEVER SHOW AGAIN TICKED");
-
-                }
-                else{
-                    LOG.d(TAG, "--------------------NEVER SHOW AGAIN UNTICKED");
-
-                }
-            }
             return true;
         }
         else if(action.equals("clearWatch")){
@@ -237,35 +217,6 @@ public class Geolocation extends CordovaPlugin  {
                 return false;
             }
         }
-        else if(action.equals("goSettings")){
-
-
-            String Title = args.get(1).toString();
-            String Message = args.get(2).toString();
-            String Yes = args.get(3).toString();
-            String No= args.get(4).toString();
-
-            Context mContext = this.cordova.getActivity();
-            new AlertDialog.Builder(mContext)
-                    .setTitle(Title)
-                    .setMessage(Message)
-                    .setPositiveButton(Yes, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            Intent intent = null;
-                            intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri);
-                            mContext.startActivity(intent);
-                        }
-                    })
-                    // A null listener allows the button to dismiss the dialog and take no further action.
-                    .setNegativeButton(No, null)
-                    .setIcon(android.R.drawable.ic_dialog_alert)
-                    .show();
-
-            /*
-
-
-            */
-        }
         return false;
     }
 
@@ -276,39 +227,6 @@ public class Geolocation extends CordovaPlugin  {
         PluginResult result;
         //This is important if we're using Cordova without using Cordova, but we have the geolocation plugin installed
         if(context != null) {
-            for (int i = 0, len = permissions.length; i < len; i++) {
-                String permission = permissions[i];
-                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
-                    LOG.d(TAG, "Permission Denied");
-                    // user rejected the permission
-                    boolean showRationale = this.cordova.getActivity().shouldShowRequestPermissionRationale( permission );
-                    LOG.d(TAG, "-----showRationale = ",showRationale);
-                    if (! showRationale) {
-                        LOG.d(TAG, "----NEVER SHOW AGAIN TICKED");
-                        doNotShowAnymoreTicked = true;
-                        result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
-                        context.sendPluginResult(result);
-                        sendJavascript("events.publish('geoloc.permissionDenied')");
-                        return;
-                    }
-                    else {
-                        LOG.d(TAG, "----NEVER SHOW AGAIN UNTICKED");
-                        doNotShowAnymoreTicked = false;
-                        result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
-                        context.sendPluginResult(result);
-                        sendJavascript("events.publish('geoloc.permissionDeniedWithPrompt')");
-                        return;
-                    }
-                }
-                else if (grantResults[i] == PackageManager.PERMISSION_GRANTED){
-                    LOG.d(TAG, "Permission Granted");
-                    sendJavascript("events.publish('geoloc.permissionGranted')");
-                }
-            }
-
-
-            
-
             boolean gps_enabled;
             boolean network_enabled;
             LocationManager lm = (LocationManager) this.cordova.getActivity().getSystemService(
@@ -333,33 +251,10 @@ public class Geolocation extends CordovaPlugin  {
             else{
                 sendJavascript("events.publish('geoloc.locationEnabled')");
             }
-
-
-
+            
             result = new PluginResult(PluginResult.Status.OK);
             context.sendPluginResult(result);
         }
-    }
-
-    public boolean hasPermisssion() {
-        for(String p : permissions)
-        {
-            if(!PermissionHelper.hasPermission(this, p))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /*
-     * We override this so that we can access the permissions variable, which no longer exists in
-     * the parent class, since we can't initialize it reliably in the constructor!
-     */
-
-    public void requestPermissions(int requestCode)
-    {
-        PermissionHelper.requestPermissions(this, requestCode, permissions);
     }
 
     @TargetApi(Build.VERSION_CODES.KITKAT)

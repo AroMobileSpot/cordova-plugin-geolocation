@@ -220,40 +220,6 @@
     }
 }
 
-- (void)getLocation:(CDVInvokedUrlCommand*)command
-{
-    [self.commandDelegate runInBackground:^{
-        NSString* callbackId = command.callbackId;
-        BOOL enableHighAccuracy = [[command argumentAtIndex:0] boolValue];
-        
-        if ([self isLocationServicesEnabled] == NO) {
-            NSMutableDictionary* posError = [NSMutableDictionary dictionaryWithCapacity:2];
-            [posError setObject:[NSNumber numberWithInt:PERMISSIONDENIED] forKey:@"code"];
-            [posError setObject:@"Location services are disabled." forKey:@"message"];
-            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:posError];
-            [self.commandDelegate sendPluginResult:result callbackId:callbackId];
-        } else {
-            if (!self.locationData) {
-                self.locationData = [[CDVLocationData alloc] init];
-            }
-            CDVLocationData* lData = self.locationData;
-            if (!lData.locationCallbacks) {
-                lData.locationCallbacks = [NSMutableArray arrayWithCapacity:1];
-            }
-            
-            if (!__locationStarted || (__highAccuracyEnabled != enableHighAccuracy)) {
-                // add the callbackId into the array so we can call back when get data
-                if (callbackId != nil) {
-                    [lData.locationCallbacks addObject:callbackId];
-                }
-                // Tell the location manager to start notifying us of heading updates
-                [self startLocation:enableHighAccuracy];
-            } else {
-                [self returnLocationInfo:callbackId andKeepCallback:NO];
-            }
-        }
-    }];
-}
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central {
     if (central.state == CBCentralManagerStatePoweredOn) {
        NSLog(@"-------------------NATIVE BLUETOOTH AVAILABLE");
@@ -402,11 +368,11 @@
     }
     else if (![self isAuthorized]) {
         [[self commandDelegate] evalJs:@"events.publish('geoloc.locationEnabled')"];
-        [[self commandDelegate] evalJs:@"events.publish('geoloc.permissionDenied')"];
+
     }
     else{
         [[self commandDelegate] evalJs:@"events.publish('geoloc.locationEnabled')"];
-        [[self commandDelegate] evalJs:@"events.publish('geoloc.permissionGranted')"];
+
     }
     
     
@@ -424,47 +390,6 @@
 {
     [self _stopLocation];
     [self.locationManager stopUpdatingHeading];
-}
-- (void) goSettings:(CDVInvokedUrlCommand*)command
-{   
-
-   
-
-    NSString* type = [command.arguments objectAtIndex:0];
-    NSString* Title = [command.arguments objectAtIndex:1];
-    NSString* Message = [command.arguments objectAtIndex:2];
-    NSString* Yes = [command.arguments objectAtIndex:3];
-    NSString* No = [command.arguments objectAtIndex:4];
-
-
-
-    
-    UIAlertController * alert = [UIAlertController
-                                 alertControllerWithTitle:Title
-                                 message:Message
-                                 preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction* yesButton = [UIAlertAction
-                                actionWithTitle:Yes
-                                style:UIAlertActionStyleDefault
-                                handler:^(UIAlertAction * action) {
-                                    
-                                    if([type isEqualToString:@"app"]){
-                                        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
-                                    }
-                                    else if([type isEqualToString:@"main"]){
-                                        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
-                                        //[[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"App-Prefs:root=Privacy&path=LOCATION"]];
-                                    }
-                                }];
-    UIAlertAction* noButton = [UIAlertAction
-                               actionWithTitle:No
-                               style:UIAlertActionStyleDefault
-                               handler:^(UIAlertAction * action) {
-                                   //Handle no, thanks button
-                               }];
-    [alert addAction:yesButton];
-    [alert addAction:noButton];
-    [self.viewController presentViewController:alert animated:YES completion:nil];
 }
 
 @end
